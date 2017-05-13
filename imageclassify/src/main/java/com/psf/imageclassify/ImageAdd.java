@@ -19,6 +19,13 @@ import java.io.PrintWriter;
 public class ImageAdd {
     static final String imageInfoPath = Environment.getExternalStorageDirectory()+"/image/imageInfo.csv";
     static final String hashCodePath = Environment.getExternalStorageDirectory()+"/image/hashcode.hc";
+
+    /**
+     * 添加图片到图片库，包含其文件路径，文件top20分类信息，1536位哈希码
+     * @param result 包含神经网络处理后的信息 top20分类，1536位哈希码信息
+     * @param imagePath 文件的路径
+     * @return
+     */
     static boolean addImageInfo(ImageNet.NetResult result, String imagePath){
         try(FileWriter mfw = new FileWriter(imageInfoPath, true); FileOutputStream fos = new FileOutputStream(hashCodePath, true)){
             mfw.write(imagePath);
