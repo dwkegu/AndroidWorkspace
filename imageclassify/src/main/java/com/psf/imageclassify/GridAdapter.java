@@ -1,7 +1,9 @@
 package com.psf.imageclassify;
 
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +21,7 @@ public class GridAdapter extends BaseAdapter {
     String[] imageFiles =null;
     String imagePath;
     boolean[] changed;
+    Bitmap[] bitmaps;
     GridAdapter(){
         imagePath = Environment.getExternalStorageDirectory().getPath()+"/imageRetrieval/image/";
     }
@@ -45,22 +48,55 @@ public class GridAdapter extends BaseAdapter {
         if(imageFiles==null) return null;
         if(convertView==null||((PlaceHolder)(convertView.getTag())).position!=position){
             if(convertView==null){
+                Log.v("GridAdapter:", "convertView is null:"+String.valueOf(position));
                 LayoutInflater minflater = LayoutInflater.from(parent.getContext());
                 convertView = minflater.inflate(R.layout.grid_item_view, parent, false);
-                PlaceHolder mHodler = new PlaceHolder();
-                mHodler.imageView = (ImageView) convertView.findViewById(R.id.grid_image);
-                mHodler.imageView.setImageBitmap(BitmapFactory.decodeFile(imagePath+imageFiles[position]));
-                mHodler.position = position;
-                convertView.setTag(mHodler);
+                PlaceHolder mHolder = new PlaceHolder();
+                mHolder.imageView = (ImageView) convertView.findViewById(R.id.grid_image);
+                if(bitmaps[position]==null){
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inJustDecodeBounds=true;
+                    BitmapFactory.decodeFile(imageFiles[position], options);
+                    int sampleRatex = options.outWidth/200;
+                    int sampleRatey = options.outHeight/200;
+                    options.inSampleSize= sampleRatex>sampleRatey? sampleRatex:sampleRatey;
+                    options.inJustDecodeBounds=false;
+                    bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
+                }
+                mHolder.imageView.setImageBitmap(bitmaps[position]);
+                mHolder.position = position;
+                convertView.setTag(mHolder);
             }else {
+                Log.v("GridAdapter:", "position isn't correct:"+String.valueOf(position));
                 PlaceHolder mHolder = (PlaceHolder)convertView.getTag();
-                mHolder.imageView.setImageBitmap(BitmapFactory.decodeFile(imagePath+imageFiles[position]));
+                if(bitmaps[position]==null){
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inJustDecodeBounds=true;
+                    BitmapFactory.decodeFile(imageFiles[position], options);
+                    int sampleRatex = options.outWidth/200;
+                    int sampleRatey = options.outHeight/200;
+                    options.inSampleSize= sampleRatex>sampleRatey? sampleRatex:sampleRatey;
+                    options.inJustDecodeBounds=false;
+                    bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
+                }
+                mHolder.imageView.setImageBitmap(bitmaps[position]);
                 mHolder.position = position;
             }
         }else {
             if(changed[position]){
+                Log.v("GridAdapter:", String.valueOf(position));
                 PlaceHolder mHolder = (PlaceHolder)convertView.getTag();
-                mHolder.imageView.setImageBitmap(BitmapFactory.decodeFile(imagePath+imageFiles[position]));
+                if(bitmaps[position]==null){
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inJustDecodeBounds=true;
+                    BitmapFactory.decodeFile(imageFiles[position], options);
+                    int sampleRatex = options.outWidth/200;
+                    int sampleRatey = options.outHeight/200;
+                    options.inSampleSize= sampleRatex>sampleRatey? sampleRatex:sampleRatey;
+                    options.inJustDecodeBounds=false;
+                    bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
+                }
+                mHolder.imageView.setImageBitmap(bitmaps[position]);
                 mHolder.position = position;
                 changed[position] = false;
             }
@@ -76,7 +112,7 @@ public class GridAdapter extends BaseAdapter {
         for(int i=0;i<this.imageFiles.length;i++){
             changed[i] = true;
         }
-
+        bitmaps=new Bitmap[imageFiles.length];
     }
     private class PlaceHolder{
         ImageView imageView;
