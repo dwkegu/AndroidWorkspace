@@ -15,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 
 
 /**
@@ -25,6 +26,9 @@ import java.io.InputStreamReader;
 public class ImageNet {
     static boolean hasInit = false;
     final String TAG ="IMAGENET:";
+    static final String SEARCH_RESULT = "topk";
+    static final String NET_RESULT = "NetResult";
+    static final String IMAGEPATH = "imagePath";
     private final String inputName = "input";
     //InceptionV4/Logits/Logits/BiasAdd
     private final String[] outputNames = {"InceptionV4/Logits/PreLogitsFlatten/Reshape","InceptionV4/Logits/Logits/BiasAdd","InceptionV4/Logits/top_K"};
@@ -56,13 +60,21 @@ public class ImageNet {
 
         hasInit=true;
     }
-    void run(final Bitmap bitmap){
+
+    /**
+     * 运行神经网络，进行图像搜索或者获取图像特征信息，单独的线程，不会阻塞UI
+     * @param bitmap 输入的图像
+     * @param runForSearch true 表示进行图像搜索，false表示获取图像信息。
+     */
+    void run(final Bitmap bitmap, final String imagePath, final boolean runForSearch){
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try{
-                    //获取图片特征
-                    NetResult res = getHashCode(bitmap);
+                //获取图片特征
+                NetResult res = getHashCode(bitmap);
+                Message msg = Message.obtain();
+                Bundle data = new Bundle();
+                if(runForSearch){
                     for(int i=0;i<res.topK.length;i++){
                         Log.v(TAG, String.valueOf(res.topK[i]));
                     }
@@ -133,27 +145,27 @@ public class ImageNet {
                             }
                         }
                         Log.v(TAG, "查找结束");
-                        Message msg = Message.obtain();
                         msg.what = MainActivity.HASHCODERESULT;
-                        Bundle data = new Bundle();
                         String[] similarImages = mpair.getTopK();
-                        data.putStringArray("topK", similarImages);
-                        msg.setData(data);
-                        mhandler.sendMessage(msg);
+                        data.putStringArray(SEARCH_RESULT, similarImages);
                     }catch (IOException e){
                         Log.v(TAG, "read image error");
                         e.printStackTrace();
                     }
-
-
-                }catch (ImageSizeException e){
-                    e.printStackTrace();
+                }else{
+                    msg.what = MainActivity.IMAGEINFORESULT;
+                    data.putSerializable(NET_RESULT, res);
+                    data.putString(IMAGEPATH, imagePath);
                 }
+                msg.setData(data);
+                mhandler.sendMessage(msg);
+
+
 
             }
         }).start();
     }
-    private NetResult getHashCode(Bitmap bitmap) throws ImageSizeException{
+    private NetResult getHashCode(Bitmap bitmap){
         fValue = imageEvalProcess(bitmap, 0.875f);
         mInference.feed(inputName, fValue, 1, inputSize, inputSize, 3);
         mInference.run(outputNames);
@@ -230,13 +242,13 @@ public class ImageNet {
         }
 
         String[] getTopK() {
-            for(int i = 0; i < posi.length; i++){
-                Log.v(TAG, posi[i]);
-            }
+//            for(int i = 0; i < posi.length; i++){
+//                Log.v(TAG, posi[i]);
+//            }
             return posi;
         }
     }
-    private class NetResult{
+    public class NetResult implements Serializable{
         byte[] hashCode;
         int[] topK;
         NetResult(){
@@ -335,7 +347,7 @@ public class ImageNet {
         Log.v(TAG, sb.toString());
         return hashcode;
     }
-    float[] imageEvalProcess(Bitmap bitmap, float centralFraction){
+    private float[] imageEvalProcess(Bitmap bitmap, float centralFraction){
         if(centralFraction>1||centralFraction<=0) return null;
         int width = bitmap.getWidth();
         int height = bitmap.getHeight();
