@@ -2,8 +2,9 @@ package com.psf.imageclassify;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.util.SortedList;
@@ -12,11 +13,11 @@ import org.tensorflow.Operation;
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Serializable;
-
 
 /**
  * Created by psf on 2017/5/9.
@@ -38,7 +39,7 @@ public class ImageNet {
     private final float imagestd = 1f;
     private final int hashCodeNum = 1536;
     private final int classNum = 1001;
-    private int topKnum;
+    static int topKnum;
     private Operation operation[];
     private float[] fValue;
     private TensorFlowInferenceInterface mInference;
@@ -78,9 +79,11 @@ public class ImageNet {
                     for(int i=0;i<res.topK.length;i++){
                         Log.v(TAG, String.valueOf(res.topK[i]));
                     }
-                    try(InputStream hc = asm.open("hashCodes.hc");
+                    try(InputStream hc = new FileInputStream(Environment.getExternalStorageDirectory()
+                            +"/imageRetrieval/hashCode.hc");
                         //读取图片库特征文件
-                        InputStream imageInfo = asm.open("imageInfo.csv")){
+                        InputStream imageInfo = new FileInputStream(Environment.getExternalStorageDirectory()
+                                +"/imageRetrieval/imageInfo.csv")){
                         //读取图片库图片名和top排名
                         InputStreamReader infoReader = new InputStreamReader(imageInfo);
                         BufferedReader bfr = new BufferedReader(infoReader);
@@ -148,6 +151,7 @@ public class ImageNet {
                         msg.what = MainActivity.HASHCODERESULT;
                         String[] similarImages = mpair.getTopK();
                         data.putStringArray(SEARCH_RESULT, similarImages);
+                        data.putString(IMAGEPATH, imagePath);
                     }catch (IOException e){
                         Log.v(TAG, "read image error");
                         e.printStackTrace();
@@ -245,16 +249,14 @@ public class ImageNet {
 //            for(int i = 0; i < posi.length; i++){
 //                Log.v(TAG, posi[i]);
 //            }
-            return posi;
+            String[] topk = new String[currentNum];
+            for(int i=0;i<currentNum;i++){
+                topk[i]=posi[i];
+            }
+            return topk;
         }
     }
-    public class NetResult implements Serializable{
-        byte[] hashCode;
-        int[] topK;
-        NetResult(){
-            topK=new int[topKnum];
-        }
-    }
+
     private int[] getTopK(float[] predicts){
         int[] min20 = new int[20];
         SortedList<IFPair> msl = new SortedList<>(IFPair.class, new SortedList.Callback<IFPair>() {
