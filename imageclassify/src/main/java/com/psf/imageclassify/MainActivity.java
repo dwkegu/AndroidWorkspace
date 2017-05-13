@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.BoolRes;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
@@ -30,7 +31,9 @@ public class MainActivity extends AppCompatActivity {
     static final int WRITE_EX = 100;
     static final int READ_EX = 101;
     static final int IMAGEREQUESTCODE = 200;
+    static final int ADDIMAGEREQUESTCODE = 201;
     static final int HASHCODERESULT = 1;
+    static final int IMAGEINFORESULT = 2;
     final String TAG="MAINACTIVITY:";
     GridView mgrid=null;
     GridAdapter madapter=null;
@@ -42,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
             Log.v(TAG, "handler received");
             switch (msg.what){
                 case HASHCODERESULT:
-                    String[] res = msg.getData().getStringArray("topK");
+                    String[] res = msg.getData().getStringArray(ImageNet.SEARCH_RESULT);
                     if (res==null) return true;
                     for(String item:res){
                         Log.v(TAG, item);
@@ -50,6 +53,11 @@ public class MainActivity extends AppCompatActivity {
                     madapter.setData(res);
                     madapter.notifyDataSetChanged();
                     break;
+                case IMAGEINFORESULT:
+                    Bundle data = msg.getData();
+                    ImageNet.NetResult info = data.getParcelable(ImageNet.NET_RESULT);
+                    String imagePath = data.getString(ImageNet.IMAGEPATH);
+                    if(info!=null) ImageAdd.addImageInfo(info, imagePath);
                 default:
                     break;
             }
@@ -101,15 +109,24 @@ public class MainActivity extends AppCompatActivity {
             case IMAGEREQUESTCODE:
                 Toast.makeText(getApplicationContext(),"hello:"+ data.getDataString(), Toast.LENGTH_LONG).show();
                 Uri imageUri = data.getData();
-                try{
+                try(InputStream min1 = getContentResolver().openInputStream(imageUri)){
                     Log.v(TAG, imageUri.toString());
-                    InputStream min = getContentResolver().openInputStream(imageUri);
-                    Bitmap bitmap = BitmapFactory.decodeStream(min);
+                    Bitmap bitmap = BitmapFactory.decodeStream(min1);
 //                        String exPath = Environment.getExternalStorageDirectory().getPath();
 //                        BitmapFactory.decodeFile(exPath+"/image/test.jpg");
 //                        Bitmap bitmap = BitmapFactory.decodeFile(exPath+"/image/test.jpg");
-                    net.run(bitmap);
+                    net.run(bitmap, null, true);
                     Log.v(TAG, "finish");
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+                break;
+            case ADDIMAGEREQUESTCODE:
+                Uri addImageUri = data.getData();
+                try(InputStream min2 = getContentResolver().openInputStream(addImageUri);){
+                    Bitmap bitmap = BitmapFactory.decodeStream(min2);
+                    net.run(bitmap, addImageUri.getPath(), false);
+                    Log.v(TAG, "call net add image");
                 }catch (IOException e){
                     e.printStackTrace();
                 }
@@ -160,7 +177,10 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_add_image) {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            startActivityForResult(intent, ADDIMAGEREQUESTCODE);
             return true;
         }
 
