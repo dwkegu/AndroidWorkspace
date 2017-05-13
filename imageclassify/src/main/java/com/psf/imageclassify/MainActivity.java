@@ -1,8 +1,10 @@
 package com.psf.imageclassify;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -21,9 +23,12 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.GridView;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -39,24 +44,29 @@ public class MainActivity extends AppCompatActivity {
     GridAdapter madapter=null;
     ImageNet net;
     TextView mtv;
+    ImageView searchView;
+    ProgressDialog mpd;
     public Handler mhander = new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
             Log.v(TAG, "handler received");
+            Bundle data = msg.getData();
+            String imagePath = data.getString(ImageNet.IMAGEPATH);
             switch (msg.what){
                 case HASHCODERESULT:
-                    String[] res = msg.getData().getStringArray(ImageNet.SEARCH_RESULT);
+                    String[] res = data.getStringArray(ImageNet.SEARCH_RESULT);
                     if (res==null) return true;
                     for(String item:res){
                         Log.v(TAG, item);
                     }
+                    searchView.setImageBitmap(BitmapFactory.decodeFile(imagePath));
                     madapter.setData(res);
                     madapter.notifyDataSetChanged();
+                    mpd.dismiss();
                     break;
                 case IMAGEINFORESULT:
-                    Bundle data = msg.getData();
-                    ImageNet.NetResult info = data.getParcelable(ImageNet.NET_RESULT);
-                    String imagePath = data.getString(ImageNet.IMAGEPATH);
+                    NetResult info = (NetResult)data.getSerializable(ImageNet.NET_RESULT);
+                    mpd.dismiss();
                     if(info!=null) ImageAdd.addImageInfo(info, imagePath);
                 default:
                     break;
@@ -65,17 +75,22 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
     });
+    class InitThread extends Thread{
+        ProgressDialog mpd;
+        InitThread(ProgressDialog mpd, Handler handler){
+            super();
+            this.mpd = mpd;
+        }
+        @Override
+        public void run() {
+            net = new ImageNet(getAssets());
+            net.setHandler(mhander);
+            mpd.dismiss();
+        }
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                net = new ImageNet(getAssets());
-                Log.v(TAG, "net init finish");
-                net.setHandler(mhander);
-            }
-        }).start();
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -84,6 +99,7 @@ public class MainActivity extends AppCompatActivity {
         mgrid.setAdapter(madapter);
         checkPermission();
         mtv = (TextView)findViewById(R.id.text_main);
+        searchView = (ImageView)findViewById(R.id.query_image);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -99,6 +115,11 @@ public class MainActivity extends AppCompatActivity {
 //                        .setAction("Action", null).show();
             }
         });
+        mpd = new ProgressDialog(this, 0);
+        mpd.setMessage("初始化系统中......");
+        mpd.show();
+        InitThread initThread = new InitThread(mpd, mhander);
+        initThread.start();
     }
 
     @Override
@@ -115,7 +136,9 @@ public class MainActivity extends AppCompatActivity {
 //                        String exPath = Environment.getExternalStorageDirectory().getPath();
 //                        BitmapFactory.decodeFile(exPath+"/image/test.jpg");
 //                        Bitmap bitmap = BitmapFactory.decodeFile(exPath+"/image/test.jpg");
-                    net.run(bitmap, null, true);
+                    mpd.setMessage("正在搜索相似图像......");
+                    mpd.show();
+                    net.run(bitmap, ImageAdd.getRealPathFromURI(getApplicationContext(), imageUri), true);
                     Log.v(TAG, "finish");
                 }catch (IOException e){
                     e.printStackTrace();
@@ -123,9 +146,14 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case ADDIMAGEREQUESTCODE:
                 Uri addImageUri = data.getData();
-                try(InputStream min2 = getContentResolver().openInputStream(addImageUri);){
+                try(InputStream min2 = getContentResolver().openInputStream(addImageUri)){
                     Bitmap bitmap = BitmapFactory.decodeStream(min2);
-                    net.run(bitmap, addImageUri.getPath(), false);
+                    if(mpd==null){
+                        mpd = new ProgressDialog(this, 0);
+                    }
+                    mpd.setMessage("添加图像......");
+                    mpd.show();
+                    net.run(bitmap, ImageAdd.getRealPathFromURI(getApplicationContext(), addImageUri), false);
                     Log.v(TAG, "call net add image");
                 }catch (IOException e){
                     e.printStackTrace();
