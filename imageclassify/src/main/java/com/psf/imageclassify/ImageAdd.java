@@ -1,14 +1,16 @@
 package com.psf.imageclassify;
 
+import android.content.Context;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 
-import java.io.BufferedWriter;
-import java.io.File;
+
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 
 
 /**
@@ -17,8 +19,8 @@ import java.io.PrintWriter;
  */
 
 public class ImageAdd {
-    static final String imageInfoPath = Environment.getExternalStorageDirectory()+"/image/imageInfo.csv";
-    static final String hashCodePath = Environment.getExternalStorageDirectory()+"/image/hashcode.hc";
+    static final String imageInfoPath = Environment.getExternalStorageDirectory()+"/imageRetrieval/imageInfo.csv";
+    static final String hashCodePath = Environment.getExternalStorageDirectory()+"/imageRetrieval/hashcode.hc";
 
     /**
      * 添加图片到图片库，包含其文件路径，文件top20分类信息，1536位哈希码
@@ -26,14 +28,14 @@ public class ImageAdd {
      * @param imagePath 文件的路径
      * @return
      */
-    static boolean addImageInfo(ImageNet.NetResult result, String imagePath){
+    static boolean addImageInfo(NetResult result, String imagePath){
         try(FileWriter mfw = new FileWriter(imageInfoPath, true); FileOutputStream fos = new FileOutputStream(hashCodePath, true)){
-            mfw.write(imagePath);
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder(imagePath);
             for(int i = 0; i < result.topK.length; i++){
-                sb.append(result.topK[i]);
                 sb.append(',');
+                sb.append(result.topK[i]);
             }
+            sb.append('\n');
             mfw.write(sb.toString());
             fos.write(result.hashCode);
             mfw.flush();
@@ -44,5 +46,27 @@ public class ImageAdd {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 从Uri得到绝对路径
+     * @param context 上下文，用于获取ContentResolver
+     * @param contentUri 包含文件路劲的Uri
+     * @return 文件的绝对路径
+     */
+    static String getRealPathFromURI(Context context, Uri contentUri) {
+        Cursor cursor = null;
+        try {
+            String[] proj = { MediaStore.Images.Media.DATA };
+            cursor = context.getContentResolver().query(contentUri,  proj, null, null, null);
+            if(cursor==null) return null;
+            int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            cursor.moveToFirst();
+            return cursor.getString(column_index);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
     }
 }
