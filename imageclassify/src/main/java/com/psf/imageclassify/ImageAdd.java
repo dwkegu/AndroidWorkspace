@@ -20,7 +20,7 @@ import java.io.IOException;
 
 public class ImageAdd {
     static final String imageInfoPath = Environment.getExternalStorageDirectory()+"/imageRetrieval/imageInfo.csv";
-    static final String hashCodePath = Environment.getExternalStorageDirectory()+"/imageRetrieval/hashcode.hc";
+    static final String hashCodePath = Environment.getExternalStorageDirectory()+"/imageRetrieval/hashCode.hc";
 
     /**
      * 添加图片到图片库，包含其文件路径，文件top20分类信息，1536位哈希码
