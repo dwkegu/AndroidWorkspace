@@ -72,6 +72,7 @@ public class ImageNet {
             @Override
             public void run() {
                 //获取图片特征
+                Log.v(TAG, imagePath);
                 NetResult res = getHashCode(bitmap);
                 Message msg = Message.obtain();
                 Bundle data = new Bundle();
@@ -129,21 +130,22 @@ public class ImageNet {
                                             break;
                                         }
                                     }
-                                    //如果检测到，则跳出
-                                    if (check) {
-                                        int dist = 0;
-                                        // 比较汉明码距
-                                        for (int j = 0; j < 192; j++) {
-                                            comRes = (byte) (res.hashCode[j] & temp[j]);
-                                            for (int k = 0; k < 8; k++) {
-                                                dist += (comRes & 0x01);
-                                                comRes = (byte) (comRes >> 1);
-                                            }
+                                    if(check) break;
+                                }
+                                //如果检测到，则跳出
+                                if (check) {
+                                    int dist = 0;
+                                    // 比较汉明码距
+                                    for (int j = 0; j < 192; j++) {
+                                        comRes = (byte) (res.hashCode[j] ^ temp[j]);
+                                        for (int k = 0; k < 8; k++) {
+                                            dist += (comRes & 0x01);
+                                            comRes = (byte) (comRes >> 1);
                                         }
-                                        //将码距和文件名同时排名
-                                        // Log.v(TAG, "push");
-                                        mpair.push(dist, fileName);
                                     }
+                                    //将码距和文件名同时排名
+                                    // Log.v(TAG, "push");
+                                    mpair.push(dist, fileName);
                                 }
                             }
                         }
@@ -208,37 +210,45 @@ public class ImageNet {
         String[] posi;
         int[] value;
         int currentNum;
-        int min;
-        int minposi;
         SortedPair(int maxLength){
             this.maxLength = maxLength;
             posi = new String[maxLength];
             value = new int[maxLength];
             currentNum = 0;
-            minposi =-1;
-            min= Integer.MAX_VALUE;
         }
         void push(int value, String location){
-//            Log.v(TAG, "PUSH:" + String.valueOf(value) + location );
+            Log.v(TAG, "PUSH:" + String.valueOf(value) + location );
             if(currentNum<maxLength){
-                posi[currentNum] = location;
-                this.value[currentNum] = value;
-                if(value<min){
-                    min = value;
-                    minposi = currentNum;
+                if(currentNum==0||value>=this.value[currentNum-1]){
+                    posi[currentNum] = location;
+                    this.value[currentNum] = value;
+                }else{
+                    for(int i=0;i<currentNum;i++){
+                        if(this.value[i]>value){
+                            //将value插入
+                            for(int j=currentNum; j>i;j--){
+                                this.value[j]=this.value[j-1];
+                                this.posi[j]=this.posi[j-1];
+                            }
+                            this.value[i]=value;
+                            this.posi[i]=location;
+                            break;
+                        }
+                    }
                 }
                 currentNum++;
             }else {
-                if(value<min){
-                    this.value[minposi]=value;
-                    posi[minposi]=location;
-                    min = this.value[0];
-                    minposi = 0;
-                    for(int i=1;i<maxLength;i++){
-                        if(this.value[i]<min){
-                            min = this.value[i];
-                            minposi = i;
+                if(value>=this.value[currentNum-1]) return;
+                for(int i=0;i<currentNum;i++){
+                    if(this.value[i]>value){
+                        //将value插入
+                        for(int j=currentNum-1; j>i;j--){
+                            this.value[j]=this.value[j-1];
+                            this.posi[j]=this.posi[j-1];
                         }
+                        this.value[i]=value;
+                        this.posi[i]=location;
+                        break;
                     }
                 }
 
