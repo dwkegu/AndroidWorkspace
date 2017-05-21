@@ -9,6 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
+import android.widget.TextView;
+
+import org.w3c.dom.Text;
 
 import java.util.zip.Inflater;
 
@@ -22,6 +25,7 @@ public class GridAdapter extends BaseAdapter {
     String imagePath;
     boolean[] changed;
     Bitmap[] bitmaps;
+    int[] distance = null;
     GridAdapter(){
         imagePath = Environment.getExternalStorageDirectory().getPath()+"/imageRetrieval/image/";
     }
@@ -53,6 +57,7 @@ public class GridAdapter extends BaseAdapter {
                 convertView = minflater.inflate(R.layout.grid_item_view, parent, false);
                 PlaceHolder mHolder = new PlaceHolder();
                 mHolder.imageView = (ImageView) convertView.findViewById(R.id.grid_image);
+                mHolder.textView = (TextView) convertView.findViewById(R.id.item_distance);
                 if(bitmaps[position]==null){
                     BitmapFactory.Options options = new BitmapFactory.Options();
                     options.inJustDecodeBounds=true;
@@ -64,6 +69,7 @@ public class GridAdapter extends BaseAdapter {
                     bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
                 }
                 mHolder.imageView.setImageBitmap(bitmaps[position]);
+                mHolder.textView.setText(String.valueOf(distance[position]));
                 mHolder.position = position;
                 convertView.setTag(mHolder);
             }else {
@@ -80,6 +86,7 @@ public class GridAdapter extends BaseAdapter {
                     bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
                 }
                 mHolder.imageView.setImageBitmap(bitmaps[position]);
+                mHolder.textView.setText(String.valueOf(distance[position]));
                 mHolder.position = position;
             }
         }else {
@@ -97,6 +104,7 @@ public class GridAdapter extends BaseAdapter {
                     bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
                 }
                 mHolder.imageView.setImageBitmap(bitmaps[position]);
+                mHolder.textView.setText(String.valueOf(distance[position]));
                 mHolder.position = position;
                 changed[position] = false;
             }
@@ -105,7 +113,7 @@ public class GridAdapter extends BaseAdapter {
         return convertView;
 
     }
-    public void setData(String[] imageFiles){
+    public void setData(String[] imageFiles, int[] value){
 
         this.imageFiles = imageFiles;
         changed = new boolean[this.imageFiles.length];
@@ -113,9 +121,11 @@ public class GridAdapter extends BaseAdapter {
             changed[i] = true;
         }
         bitmaps=new Bitmap[imageFiles.length];
+        distance = value;
     }
     private class PlaceHolder{
         ImageView imageView;
+        TextView textView;
         int position;
     }
 }
