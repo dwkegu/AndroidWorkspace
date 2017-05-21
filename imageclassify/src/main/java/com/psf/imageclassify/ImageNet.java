@@ -3,6 +3,8 @@ package com.psf.imageclassify;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 
+import android.graphics.BitmapFactory;
+import android.graphics.Point;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -30,6 +32,7 @@ public class ImageNet {
     static final String SEARCH_RESULT = "topk";
     static final String NET_RESULT = "NetResult";
     static final String IMAGEPATH = "imagePath";
+    static final String IMAGEDISTANCE = "imageDistance";
     private final String inputName = "input";
     //InceptionV4/Logits/Logits/BiasAdd
     private final String[] outputNames = {"InceptionV4/Logits/PreLogitsFlatten/Reshape","InceptionV4/Logits/Logits/BiasAdd","InceptionV4/Logits/top_K"};
@@ -152,8 +155,10 @@ public class ImageNet {
                         Log.v(TAG, "查找结束");
                         msg.what = MainActivity.HASHCODERESULT;
                         String[] similarImages = mpair.getTopK();
+                        int[] topValue = mpair.getTopValue();
                         data.putStringArray(SEARCH_RESULT, similarImages);
                         data.putString(IMAGEPATH, imagePath);
+                        data.putIntArray(IMAGEDISTANCE, topValue);
                     }catch (IOException e){
                         Log.v(TAG, "read image error");
                         e.printStackTrace();
@@ -264,6 +269,13 @@ public class ImageNet {
                 topk[i]=posi[i];
             }
             return topk;
+        }
+        int[] getTopValue(){
+            int[] topVlaue = new int[currentNum];
+            for(int i=0;i<currentNum;i++){
+                topVlaue[i]=value[i];
+            }
+            return topVlaue;
         }
     }
 
@@ -379,5 +391,96 @@ public class ImageNet {
             result[i * 3 + 2] = ((val & 0xFF) /255f- -0.5f) * 2.0f;
         }
         return result;
+    }
+
+    /**
+     * 因为android 在缩放的时候没有做双线性插值，所以这里补上
+     * @param src    原图像
+     * @param width     缩放后的宽度
+     * @param height    缩放后的高度
+     * @return          缩放后的图片
+     */
+    Bitmap createScaledBitmapBiolinear(Bitmap src, int width, int height){
+        if(src==null) return null;
+        if(src.getWidth()==width&&src.getHeight()==height) return src;
+        Bitmap dst = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        //宽度缩放系数
+        double scalew = (double) width/src.getWidth();
+        //高度缩放系数
+        double scaleh = (double) height/src.getHeight();
+        if(scalew>1){
+            //宽度放大处理
+            int[] point1 = new int[3];
+            int[] point2 = new int[3];
+            for(int i=0;i<height;i++){
+                for(int j=0;j<width;j++){
+                    double posi = j/scalew;
+                    posi -=(int)posi;
+                    final int val1 =src.getPixel(i, (int)posi);
+                    final int val2 = src.getPixel(i,(int)posi+1);
+                    point1[0] = (val1 >> 16) & 0xFF;
+                    point1[1] = (val1 >> 8) & 0xFF;
+                    point1[2] = val1 & 0xFF;
+                    point2[0] = (val2 >> 16) & 0xFF;
+                    point2[1] = (val2 >> 8) & 0xFF;
+                    point2[2] = val2 & 0xFF;
+                    int setPoint = 0;
+                    for(int k =0;k<3;k++){
+                        setPoint = (setPoint<<8)+(int)(point1[k]*(1-posi)+point2[k]*posi);
+                    }
+                    dst.setPixel(i,j,setPoint);
+                }
+            }
+        }else{
+            //宽度缩小处理
+            int[] point1 = new int[3];
+            int[] point2 = new int[3];
+            for(int i=0;i<width;i++){
+                for(int j=0;j<height;j++){
+                    double posi = j/scaleh;
+                    posi -=(int)posi;
+                    final int val1 =src.getPixel((int)posi,i);
+                    final int val2 = src.getPixel((int)posi+1,i);
+                    point1[0] = (val1 >> 16) & 0xFF;
+                    point1[1] = (val1 >> 8) & 0xFF;
+                    point1[2] = val1 & 0xFF;
+                    point2[0] = (val2 >> 16) & 0xFF;
+                    point2[1] = (val2 >> 8) & 0xFF;
+                    point2[2] = val2 & 0xFF;
+                    int setPoint = 0;
+                    for(int k =0;k<3;k++){
+                        setPoint = (setPoint<<8)+(int)(point1[k]*(1-posi)+point2[k]*posi);
+                    }
+                    dst.setPixel(j,i,setPoint);
+                }
+            }
+        }
+        if(scaleh>1){
+            //高度放大处理
+            int[] point1 = new int[3];
+            int[] point2 = new int[3];
+            for(int i=0;i<width;i++){
+                for(int j=0;j<height;j++){
+                    double posi = j/scaleh;
+                    posi -=(int)posi;
+                    final int val1 =src.getPixel((int)posi,i);
+                    final int val2 = src.getPixel((int)posi+1,i);
+                    point1[0] = (val1 >> 16) & 0xFF;
+                    point1[1] = (val1 >> 8) & 0xFF;
+                    point1[2] = val1 & 0xFF;
+                    point2[0] = (val2 >> 16) & 0xFF;
+                    point2[1] = (val2 >> 8) & 0xFF;
+                    point2[2] = val2 & 0xFF;
+                    int setPoint = 0;
+                    for(int k =0;k<3;k++){
+                        setPoint = (setPoint<<8)+(int)(point1[k]*(1-posi)+point2[k]*posi);
+                    }
+                    dst.setPixel(j,i,setPoint);
+                }
+            }
+        }else {
+            //高度缩小处理
+        }
+        return dst;
     }
 }
