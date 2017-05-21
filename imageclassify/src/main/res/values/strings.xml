@@ -1,6 +1,12 @@
 <resources>
-    <string name="app_name">ImageClassify</string>
+    <string name="app_name">深度学习图片搜索</string>
     <string name="app_name_cn">图片搜索</string>
     <string name="action_add_image">向图片库添加图片</string>
     <string name="show_result_title">搜索结果</string>
+    <string name="add_image_dialog_text_info">描述信息：</string>
+    <string name="add_image_dialog_edit_hint">请输入图片描述信息</string>
+    <string name="add_image_dialog_title">添加图片</string>
+    <string name="confirm">确认</string>
+    <string name="add">添加</string>
+    <string name="cancel">取消</string>
 </resources>
