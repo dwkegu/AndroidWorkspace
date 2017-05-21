@@ -1,7 +1,9 @@
 package com.psf.imageclassify;
 
 import android.Manifest;
+import android.app.DialogFragment;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -13,15 +15,18 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.BoolRes;
 import android.support.annotation.NonNull;
+import android.support.annotation.RestrictTo;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -46,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     TextView mtv;
     ImageView searchView;
     ProgressDialog mpd;
+    AlertDialog.Builder mbuilder;
     public Handler mhander = new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
@@ -68,7 +74,10 @@ public class MainActivity extends AppCompatActivity {
                 case IMAGEINFORESULT:
                     NetResult info = (NetResult)data.getSerializable(ImageNet.NET_RESULT);
                     mpd.dismiss();
-                    if(info!=null) ImageAdd.addImageInfo(info, imagePath);
+                    if(mbuilder==null) {
+                        mbuilder = new AlertDialog.Builder(getApplicationContext());
+                    }
+                    showAddImageDialog(mbuilder, info, imagePath);
                 default:
                     break;
             }
@@ -76,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
     });
-    class InitThread extends Thread{
+    private class InitThread extends Thread{
         ProgressDialog mpd;
         InitThread(ProgressDialog mpd, Handler handler){
             super();
@@ -116,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
 //                        .setAction("Action", null).show();
             }
         });
+        mbuilder = new AlertDialog.Builder(getApplicationContext());
         mpd = new ProgressDialog(this, 0);
         mpd.setMessage("初始化系统中......");
         mpd.setCancelable(false);
@@ -130,6 +140,7 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(getApplicationContext(), "getCode"+resultCode, Toast.LENGTH_LONG).show();
         switch (requestCode){
             case IMAGEREQUESTCODE:
+                if(resultCode!=RESULT_OK) return;
                 Toast.makeText(getApplicationContext(),"hello:"+ data.getDataString(), Toast.LENGTH_LONG).show();
                 Uri imageUri = data.getData();
                 try(InputStream min1 = getContentResolver().openInputStream(imageUri)){
@@ -147,6 +158,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
             case ADDIMAGEREQUESTCODE:
+                if(resultCode!=RESULT_OK) return;
                 Uri addImageUri = data.getData();
                 try(InputStream min2 = getContentResolver().openInputStream(addImageUri)){
                     Bitmap bitmap = BitmapFactory.decodeStream(min2);
@@ -215,6 +227,29 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+    private void showAddImageDialog(AlertDialog.Builder builder, final NetResult info, String imagePath){
+        builder.setTitle(R.string.add_image_dialog_title);
+        builder.setView(R.layout.add_image_dialog);
+        ImageView selectedImage = (ImageView)findViewById(R.id.selected_image);
+        EditText selectedImageNote = (EditText)findViewById(R.id.add_image_info);
+        selectedImage.setImageBitmap(BitmapFactory.decodeFile(imagePath));
+        builder.setPositiveButton(R.string.add, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                if(info!=null){
+
+                }
+            }
+        });
+        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+        AlertDialog mdialog = builder.create();
+        mdialog.show();
     }
 
     @Override
