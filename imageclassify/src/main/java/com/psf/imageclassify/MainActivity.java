@@ -55,12 +55,13 @@ public class MainActivity extends AppCompatActivity {
             switch (msg.what){
                 case HASHCODERESULT:
                     String[] res = data.getStringArray(ImageNet.SEARCH_RESULT);
-                    if (res==null) return true;
+                    int[] distance = data.getIntArray(ImageNet.IMAGEDISTANCE);
+                    if (res==null||distance==null) return true;
                     for(String item:res){
                         Log.v(TAG, item);
                     }
                     searchView.setImageBitmap(BitmapFactory.decodeFile(imagePath));
-                    madapter.setData(res);
+                    madapter.setData(res,distance);
                     madapter.notifyDataSetChanged();
                     mpd.dismiss();
                     break;
@@ -117,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
         });
         mpd = new ProgressDialog(this, 0);
         mpd.setMessage("初始化系统中......");
+        mpd.setCancelable(false);
         mpd.show();
         InitThread initThread = new InitThread(mpd, mhander);
         initThread.start();
