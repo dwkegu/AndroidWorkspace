@@ -17,6 +17,7 @@ import android.support.annotation.BoolRes;
 import android.support.annotation.NonNull;
 import android.support.annotation.RestrictTo;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
@@ -52,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView searchView;
     ProgressDialog mpd;
     AlertDialog.Builder mbuilder;
+    FloatingActionButton fab;
     public Handler mhander = new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
@@ -110,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
         checkPermission();
         mtv = (TextView)findViewById(R.id.text_main);
         searchView = (ImageView)findViewById(R.id.query_image);
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -228,27 +230,35 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
-    private void showAddImageDialog(AlertDialog.Builder builder, final NetResult info, String imagePath){
+    private void showAddImageDialog(AlertDialog.Builder builder, final NetResult info, final String imagePath){
         builder.setTitle(R.string.add_image_dialog_title);
         builder.setView(R.layout.add_image_dialog);
         ImageView selectedImage = (ImageView)findViewById(R.id.selected_image);
-        EditText selectedImageNote = (EditText)findViewById(R.id.add_image_info);
+        final EditText selectedImageNote = (EditText)findViewById(R.id.add_image_info);
         selectedImage.setImageBitmap(BitmapFactory.decodeFile(imagePath));
         builder.setPositiveButton(R.string.add, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                if(info!=null){
-
+                if(info ==null){
+                    dialog.dismiss();
+                    Snackbar.make(fab, getString(R.string.failed_select_image), Snackbar.LENGTH_LONG).show();
+                    return;
                 }
+                if(selectedImageNote.getText().toString().trim().equals("")){
+                    selectedImageNote.setHintTextColor(getResources().getColor(R.color.colorPrimary));
+                    return;
+                }
+                ImageAdd.addImageInfo(info, imagePath, selectedImageNote.getText().toString());
             }
         });
         builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
+                dialog.dismiss();
             }
         });
         AlertDialog mdialog = builder.create();
+        mdialog.setCancelable(false);
         mdialog.show();
     }
 

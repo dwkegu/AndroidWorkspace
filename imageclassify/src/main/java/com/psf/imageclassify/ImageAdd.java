@@ -28,7 +28,7 @@ public class ImageAdd {
      * @param imagePath 文件的路径
      * @return
      */
-    static boolean addImageInfo(NetResult result, String imagePath){
+    static boolean addImageInfo(NetResult result, String imagePath, String note){
         try(FileWriter mfw = new FileWriter(imageInfoPath, true); FileOutputStream fos = new FileOutputStream(hashCodePath, true)){
             StringBuilder sb = new StringBuilder(imagePath);
             for(int i = 0; i < result.topK.length; i++){

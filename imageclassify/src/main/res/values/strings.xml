@@ -9,4 +9,5 @@
     <string name="confirm">确认</string>
     <string name="add">添加</string>
     <string name="cancel">取消</string>
+    <string name="failed_select_image">获取图片失败</string>
 </resources>
