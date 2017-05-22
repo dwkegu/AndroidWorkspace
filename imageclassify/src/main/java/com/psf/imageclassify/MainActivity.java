@@ -63,13 +63,14 @@ public class MainActivity extends AppCompatActivity {
             switch (msg.what){
                 case HASHCODERESULT:
                     String[] res = data.getStringArray(ImageNet.SEARCH_RESULT);
+                    String[] notes = data.getStringArray(ImageNet.SEARCH_RESULTNOTES);
                     int[] distance = data.getIntArray(ImageNet.IMAGEDISTANCE);
-                    if (res==null||distance==null) return true;
+                    if (res==null||notes==null||distance==null) return true;
                     for(String item:res){
                         Log.v(TAG, item);
                     }
                     searchView.setImageBitmap(BitmapFactory.decodeFile(imagePath));
-                    madapter.setData(res,distance);
+                    madapter.setData(res,notes, distance);
                     madapter.notifyDataSetChanged();
                     mpd.dismiss();
                     break;
@@ -244,11 +245,13 @@ public class MainActivity extends AppCompatActivity {
                     Snackbar.make(fab, getString(R.string.failed_select_image), Snackbar.LENGTH_LONG).show();
                     return;
                 }
-                if(selectedImageNote.getText().toString().trim().equals("")){
+                String imageNote = selectedImageNote.getText().toString().trim();
+                if(imageNote.equals("")){
                     selectedImageNote.setHintTextColor(getResources().getColor(R.color.colorPrimary));
                     return;
                 }
-                ImageAdd.addImageInfo(info, imagePath, selectedImageNote.getText().toString());
+                imageNote = imageNote.replaceAll(",","、");
+                ImageAdd.addImageInfo(info, imagePath, imageNote);
             }
         });
         builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {

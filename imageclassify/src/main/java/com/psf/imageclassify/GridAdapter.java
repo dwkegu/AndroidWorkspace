@@ -22,6 +22,7 @@ import java.util.zip.Inflater;
 
 public class GridAdapter extends BaseAdapter {
     String[] imageFiles =null;
+    String[] notes =null;
     String imagePath;
     boolean[] changed;
     Bitmap[] bitmaps;
@@ -69,7 +70,7 @@ public class GridAdapter extends BaseAdapter {
                     bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
                 }
                 mHolder.imageView.setImageBitmap(bitmaps[position]);
-                mHolder.textView.setText(String.valueOf(distance[position]));
+                mHolder.textView.setText(notes[position]);
                 mHolder.position = position;
                 convertView.setTag(mHolder);
             }else {
@@ -86,7 +87,7 @@ public class GridAdapter extends BaseAdapter {
                     bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
                 }
                 mHolder.imageView.setImageBitmap(bitmaps[position]);
-                mHolder.textView.setText(String.valueOf(distance[position]));
+                mHolder.textView.setText(notes[position]);
                 mHolder.position = position;
             }
         }else {
@@ -104,7 +105,7 @@ public class GridAdapter extends BaseAdapter {
                     bitmaps[position] = BitmapFactory.decodeFile(imageFiles[position], options);
                 }
                 mHolder.imageView.setImageBitmap(bitmaps[position]);
-                mHolder.textView.setText(String.valueOf(distance[position]));
+                mHolder.textView.setText(notes[position]);
                 mHolder.position = position;
                 changed[position] = false;
             }
@@ -113,9 +114,10 @@ public class GridAdapter extends BaseAdapter {
         return convertView;
 
     }
-    public void setData(String[] imageFiles, int[] value){
+    public void setData(String[] imageFiles, String[] notes, int[] value){
 
         this.imageFiles = imageFiles;
+        this.notes = notes;
         changed = new boolean[this.imageFiles.length];
         for(int i=0;i<this.imageFiles.length;i++){
             changed[i] = true;

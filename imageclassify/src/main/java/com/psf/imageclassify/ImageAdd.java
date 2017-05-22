@@ -19,18 +19,25 @@ import java.io.IOException;
  */
 
 public class ImageAdd {
+    /*
     static final String imageInfoPath = Environment.getExternalStorageDirectory()+"/imageRetrieval/imageInfo.csv";
     static final String hashCodePath = Environment.getExternalStorageDirectory()+"/imageRetrieval/hashCode.hc";
-
+    */
+    static final String imageInfoPathV2 = Environment.getExternalStorageDirectory()+"/imageRetrieval/imageInfoV2.csv";
+    static final String hashCodePathV2 = Environment.getExternalStorageDirectory()+"/imageRetrieval/hashCodeV2.hc";
     /**
      * 添加图片到图片库，包含其文件路径，文件top20分类信息，1536位哈希码
      * @param result 包含神经网络处理后的信息 top20分类，1536位哈希码信息
      * @param imagePath 文件的路径
+     * @param note 图片描述信息
      * @return
      */
     static boolean addImageInfo(NetResult result, String imagePath, String note){
-        try(FileWriter mfw = new FileWriter(imageInfoPath, true); FileOutputStream fos = new FileOutputStream(hashCodePath, true)){
+        try(FileWriter mfw = new FileWriter(imageInfoPathV2, true);
+            FileOutputStream fos = new FileOutputStream(hashCodePathV2, true)){
             StringBuilder sb = new StringBuilder(imagePath);
+            sb.append(',');
+            sb.append(note);
             for(int i = 0; i < result.topK.length; i++){
                 sb.append(',');
                 sb.append(result.topK[i]);

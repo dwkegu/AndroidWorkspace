@@ -30,6 +30,7 @@ public class ImageNet {
     static boolean hasInit = false;
     final String TAG ="IMAGENET:";
     static final String SEARCH_RESULT = "topk";
+    static final String SEARCH_RESULTNOTES = "topNotes";
     static final String NET_RESULT = "NetResult";
     static final String IMAGEPATH = "imagePath";
     static final String IMAGEDISTANCE = "imageDistance";
@@ -101,7 +102,7 @@ public class ImageNet {
                         byte comRes;
                         //当前比较的图片信息
                         String fileName;
-
+                        String note;
                         //当前比较图片的前20名分类
                         int[] topk = new int[20];
                         //比较在图片库中的每个图片
@@ -109,10 +110,11 @@ public class ImageNet {
                             //读取一个图片的文件名和分类信息
                             fileName = bfr.readLine();
                             String[] info = fileName.split(",");
-                            if(info.length!=21) continue;
+                            if(info.length!=22) continue;
                             fileName = info[0];
+                            note = info[1];
                             //获取前20名的分类
-                            for(int j = 1; j < 21; j++){
+                            for(int j = 2; j < 22; j++){
                                 topk[j-1] = Integer.valueOf(info[j].trim());
                             }
                             if(hc.read(temp)<192){
@@ -148,7 +150,7 @@ public class ImageNet {
                                     }
                                     //将码距和文件名同时排名
                                     // Log.v(TAG, "push");
-                                    mpair.push(dist, fileName);
+                                    mpair.push(dist, fileName, note);
                                 }
                             }
                         }
@@ -213,15 +215,17 @@ public class ImageNet {
     private class SortedPair{
         int maxLength;
         String[] posi;
+        String[] notes;
         int[] value;
         int currentNum;
         SortedPair(int maxLength){
             this.maxLength = maxLength;
             posi = new String[maxLength];
+            notes = new String[maxLength];
             value = new int[maxLength];
             currentNum = 0;
         }
-        void push(int value, String location){
+        void push(int value, String location, String note){
             Log.v(TAG, "PUSH:" + String.valueOf(value) + location );
             if(currentNum<maxLength){
                 if(currentNum==0||value>=this.value[currentNum-1]){
@@ -234,9 +238,11 @@ public class ImageNet {
                             for(int j=currentNum; j>i;j--){
                                 this.value[j]=this.value[j-1];
                                 this.posi[j]=this.posi[j-1];
+                                notes[j] = notes[j-1];
                             }
                             this.value[i]=value;
                             this.posi[i]=location;
+                            notes[i]=note;
                             break;
                         }
                     }
@@ -250,9 +256,11 @@ public class ImageNet {
                         for(int j=currentNum-1; j>i;j--){
                             this.value[j]=this.value[j-1];
                             this.posi[j]=this.posi[j-1];
+                            notes[j] = notes[j-1];
                         }
                         this.value[i]=value;
                         this.posi[i]=location;
+                        notes[i]=note;
                         break;
                     }
                 }
@@ -269,6 +277,13 @@ public class ImageNet {
                 topk[i]=posi[i];
             }
             return topk;
+        }
+        String[] getNotes(){
+            String[] topNotes = new String[currentNum];
+            for(int i=0;i<currentNum;i++){
+                topNotes[i]=notes[i];
+            }
+            return topNotes;
         }
         int[] getTopValue(){
             int[] topVlaue = new int[currentNum];
