@@ -84,11 +84,9 @@ public class ImageNet {
                     for(int i=0;i<res.topK.length;i++){
                         Log.v(TAG, String.valueOf(res.topK[i]));
                     }
-                    try(InputStream hc = new FileInputStream(Environment.getExternalStorageDirectory()
-                            +"/imageRetrieval/hashCode.hc");
+                    try(InputStream hc = new FileInputStream(ImageAdd.hashCodePathV2);
                         //读取图片库特征文件
-                        InputStream imageInfo = new FileInputStream(Environment.getExternalStorageDirectory()
-                                +"/imageRetrieval/imageInfo.csv")){
+                        InputStream imageInfo = new FileInputStream(ImageAdd.imageInfoPathV2)){
                         //读取图片库图片名和top排名
                         InputStreamReader infoReader = new InputStreamReader(imageInfo);
                         BufferedReader bfr = new BufferedReader(infoReader);
@@ -115,7 +113,7 @@ public class ImageNet {
                             note = info[1];
                             //获取前20名的分类
                             for(int j = 2; j < 22; j++){
-                                topk[j-1] = Integer.valueOf(info[j].trim());
+                                topk[j-2] = Integer.valueOf(info[j].trim());
                             }
                             if(hc.read(temp)<192){
                                 //如果哈希码少于192byte，则发生错误。
@@ -150,15 +148,19 @@ public class ImageNet {
                                     }
                                     //将码距和文件名同时排名
                                     // Log.v(TAG, "push");
-                                    mpair.push(dist, fileName, note);
+                                    if(dist<500){
+                                        mpair.push(dist, fileName, note);
+                                    }
                                 }
                             }
                         }
                         Log.v(TAG, "查找结束");
                         msg.what = MainActivity.HASHCODERESULT;
                         String[] similarImages = mpair.getTopK();
+                        String[] similarImageNote = mpair.getNotes();
                         int[] topValue = mpair.getTopValue();
                         data.putStringArray(SEARCH_RESULT, similarImages);
+                        data.putStringArray(SEARCH_RESULTNOTES, similarImageNote);
                         data.putString(IMAGEPATH, imagePath);
                         data.putIntArray(IMAGEDISTANCE, topValue);
                     }catch (IOException e){
@@ -231,6 +233,7 @@ public class ImageNet {
                 if(currentNum==0||value>=this.value[currentNum-1]){
                     posi[currentNum] = location;
                     this.value[currentNum] = value;
+                    notes[currentNum] = note;
                 }else{
                     for(int i=0;i<currentNum;i++){
                         if(this.value[i]>value){

@@ -1,12 +1,10 @@
 package com.psf.imageclassify;
 
 import android.Manifest;
-import android.app.DialogFragment;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -15,9 +13,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.support.annotation.BoolRes;
 import android.support.annotation.NonNull;
-import android.support.annotation.RestrictTo;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
@@ -30,11 +26,11 @@ import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
+import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.io.File;
+import com.psf.imageclassify.Loader.ImageLoader;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -45,7 +41,9 @@ public class MainActivity extends AppCompatActivity {
     static final int ADDIMAGEREQUESTCODE = 201;
     static final int HASHCODERESULT = 1;
     static final int IMAGEINFORESULT = 2;
+    public static final int READIMAGERESULT=3;
     final String TAG="MAINACTIVITY:";
+    String imageNote = null;
     GridView mgrid=null;
     GridAdapter madapter=null;
     ImageNet net;
@@ -54,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
     ProgressDialog mpd;
     AlertDialog.Builder mbuilder;
     FloatingActionButton fab;
+    String[] notes;
+    int[] distances;
     public Handler mhander = new Handler(new Handler.Callback() {
         @Override
         public boolean handleMessage(Message msg) {
@@ -62,25 +62,43 @@ public class MainActivity extends AppCompatActivity {
             String imagePath = data.getString(ImageNet.IMAGEPATH);
             switch (msg.what){
                 case HASHCODERESULT:
+                    Log.v(TAG, "HASHCODERESULT");
                     String[] res = data.getStringArray(ImageNet.SEARCH_RESULT);
                     String[] notes = data.getStringArray(ImageNet.SEARCH_RESULTNOTES);
                     int[] distance = data.getIntArray(ImageNet.IMAGEDISTANCE);
-                    if (res==null||notes==null||distance==null) return true;
+                    if (res==null||notes==null||distance==null){
+                        Log.v(TAG, "search result is null");
+                        mpd.dismiss();
+                        return true;
+                    }
+                    Log.v(TAG, "here1");
                     for(String item:res){
                         Log.v(TAG, item);
                     }
+                    Log.v(TAG, "here2");
                     searchView.setImageBitmap(BitmapFactory.decodeFile(imagePath));
-                    madapter.setData(res,notes, distance);
+                    MainActivity.this.notes = notes;
+                    MainActivity.this.distances = distance;
+                    ImageLoader myLoader = new ImageLoader(res, mhander);
+                    myLoader.start();
+                    break;
+                case IMAGEINFORESULT:
+                    Log.v(TAG, "IMAGEINFORESULT");
+                    NetResult info = (NetResult)data.getSerializable(ImageNet.NET_RESULT);
+                    if(info==null||imagePath==null){
+                        mpd.dismiss();
+                        return true;
+                    }
+                    ImageAdd.addImageInfo(info,imagePath, imageNote);
+                    mpd.dismiss();
+                    break;
+                case READIMAGERESULT:
+                    Bitmap[] bitmaps= (Bitmap[])data.getParcelableArray(ImageLoader.LOADEDIMAGES);
+                    if(bitmaps==null) break;
+                    madapter.setData(bitmaps,MainActivity.this.notes, MainActivity.this.distances);
                     madapter.notifyDataSetChanged();
                     mpd.dismiss();
                     break;
-                case IMAGEINFORESULT:
-                    NetResult info = (NetResult)data.getSerializable(ImageNet.NET_RESULT);
-                    mpd.dismiss();
-                    if(mbuilder==null) {
-                        mbuilder = new AlertDialog.Builder(getApplicationContext());
-                    }
-                    showAddImageDialog(mbuilder, info, imagePath);
                 default:
                     break;
             }
@@ -128,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
 //                        .setAction("Action", null).show();
             }
         });
-        mbuilder = new AlertDialog.Builder(getApplicationContext());
+        mbuilder = new AlertDialog.Builder(this, R.style.MyAlertDialogStyle);
         mpd = new ProgressDialog(this, 0);
         mpd.setMessage("初始化系统中......");
         mpd.setCancelable(false);
@@ -140,11 +158,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Toast.makeText(getApplicationContext(), "getCode"+resultCode, Toast.LENGTH_LONG).show();
+//        Toast.makeText(getApplicationContext(), "getCode"+resultCode, Toast.LENGTH_LONG).show();
         switch (requestCode){
             case IMAGEREQUESTCODE:
                 if(resultCode!=RESULT_OK) return;
-                Toast.makeText(getApplicationContext(),"hello:"+ data.getDataString(), Toast.LENGTH_LONG).show();
+//                Toast.makeText(getApplicationContext(),"hello:"+ data.getDataString(), Toast.LENGTH_LONG).show();
                 Uri imageUri = data.getData();
                 try(InputStream min1 = getContentResolver().openInputStream(imageUri)){
                     Log.v(TAG, imageUri.toString());
@@ -165,13 +183,11 @@ public class MainActivity extends AppCompatActivity {
                 Uri addImageUri = data.getData();
                 try(InputStream min2 = getContentResolver().openInputStream(addImageUri)){
                     Bitmap bitmap = BitmapFactory.decodeStream(min2);
-                    if(mpd==null){
-                        mpd = new ProgressDialog(this, 0);
+                    if(mbuilder==null) {
+                        mbuilder = new AlertDialog.Builder(getApplicationContext());
                     }
-                    mpd.setMessage("添加图像......");
-                    mpd.show();
-                    net.run(bitmap, ImageAdd.getRealPathFromURI(getApplicationContext(), addImageUri), false);
-                    Log.v(TAG, "call net add image");
+                    showAddImageDialog(mbuilder, ImageAdd.getRealPathFromURI(getApplicationContext(), addImageUri),
+                            bitmap);
                 }catch (IOException e){
                     e.printStackTrace();
                 }
@@ -231,27 +247,30 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
-    private void showAddImageDialog(AlertDialog.Builder builder, final NetResult info, final String imagePath){
+    private void showAddImageDialog(AlertDialog.Builder builder, final String imagePath,
+                                    final Bitmap imageBitmap){
         builder.setTitle(R.string.add_image_dialog_title);
-        builder.setView(R.layout.add_image_dialog);
-        ImageView selectedImage = (ImageView)findViewById(R.id.selected_image);
-        final EditText selectedImageNote = (EditText)findViewById(R.id.add_image_info);
-        selectedImage.setImageBitmap(BitmapFactory.decodeFile(imagePath));
+        LinearLayout mview = (LinearLayout)getLayoutInflater().inflate(R.layout.add_image_dialog, null);
+        builder.setView(mview);
+        ImageView selectedImage = (ImageView)mview.findViewById(R.id.selected_image);
+        final EditText selectedImageNote = (EditText)mview.findViewById(R.id.add_image_info);
+        selectedImage.setImageBitmap(imageBitmap);
         builder.setPositiveButton(R.string.add, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                if(info ==null){
-                    dialog.dismiss();
-                    Snackbar.make(fab, getString(R.string.failed_select_image), Snackbar.LENGTH_LONG).show();
-                    return;
-                }
-                String imageNote = selectedImageNote.getText().toString().trim();
+                imageNote = selectedImageNote.getText().toString().trim();
                 if(imageNote.equals("")){
                     selectedImageNote.setHintTextColor(getResources().getColor(R.color.colorPrimary));
                     return;
                 }
                 imageNote = imageNote.replaceAll(",","、");
-                ImageAdd.addImageInfo(info, imagePath, imageNote);
+                if(mpd==null){
+                    mpd = new ProgressDialog(getApplicationContext(), 0);
+                }
+                mpd.setMessage("添加图像......");
+                dialog.dismiss();
+                mpd.show();
+                net.run(imageBitmap, imagePath,  false);
             }
         });
         builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
@@ -261,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         AlertDialog mdialog = builder.create();
-        mdialog.setCancelable(false);
+        mdialog.setCancelable(true);
         mdialog.show();
     }
 
